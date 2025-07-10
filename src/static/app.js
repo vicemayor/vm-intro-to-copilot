@@ -20,17 +20,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
-        // Build participants list HTML
+        // Build participants list HTML with delete icon and no bullet points
         let participantsHTML = "";
         if (details.participants.length > 0) {
           participantsHTML = `
             <div class="participants-section">
               <strong>Participants:</strong>
-              <ul class="participants-list">
+              <ul class="participants-list" style="list-style-type:none; padding-left:0;">
                 ${details.participants
                   .map(
                     (participant) =>
-                      `<li class="participant-item">${participant}</li>`
+                      `<li class="participant-item" style="display:flex;align-items:center;gap:6px;">
+                        <span>${participant}</span>
+                        <span class="delete-participant" data-activity="${encodeURIComponent(name)}" data-email="${encodeURIComponent(participant)}" title="Remove participant" style="cursor:pointer;color:#c62828;font-size:18px;margin-left:4px;">&#128465;</span>
+                      </li>`
                   )
                   .join("")}
               </ul>
@@ -59,6 +62,25 @@ document.addEventListener("DOMContentLoaded", () => {
         option.value = name;
         option.textContent = name;
         activitySelect.appendChild(option);
+      });
+      // Add event listeners for delete icons
+      document.querySelectorAll('.delete-participant').forEach((icon) => {
+        icon.addEventListener('click', async (e) => {
+          const activity = icon.getAttribute('data-activity');
+          const email = icon.getAttribute('data-email');
+          if (!confirm(`Remove ${decodeURIComponent(email)} from ${decodeURIComponent(activity)}?`)) return;
+          try {
+            const response = await fetch(`/activities/${activity}/unregister?email=${email}`, { method: 'POST' });
+            if (response.ok) {
+              fetchActivities();
+            } else {
+              const result = await response.json();
+              alert(result.detail || 'Failed to unregister participant.');
+            }
+          } catch (err) {
+            alert('Failed to unregister participant.');
+          }
+        });
       });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
